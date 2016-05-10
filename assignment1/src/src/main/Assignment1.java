@@ -2,19 +2,14 @@ package main;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -79,6 +74,7 @@ public class Assignment1 {
     	
     	Security.addProvider(new BouncyCastleProvider());
     	
+    	// using a static IV is fine for now
         AlgorithmParameterSpec IVspec = new IvParameterSpec("0123456789ABCDEF".getBytes());
 
         // encrypt with PKCS7 padding
@@ -86,10 +82,9 @@ public class Assignment1 {
         SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
         byte[] encryptedData = encrypterWithPad.doFinal(input.getBytes());
-        
         encodedMessage = new String(encryptedData);
 
-        System.out.println("Encode message: " + encodedMessage);
+        System.out.println("Encoded message: " + encodedMessage);
         
         return pubKey + encodedMessage;
     }
