@@ -2,15 +2,17 @@
 \pagenumbering{gobble}
 
 \begin{document}
-\section*{Question 1}
-\subsection*{1a}
+\section{Question 1}
+\subsection{1a}
  See Assignment1.java. To make this work add the bouncycastle (bcprov...) as library, which is include in our handed in file.
-\subsection*{1c}
+\subsection{1b}
+ We used function runAssignment1B for this.
+\subsection{1c}
 7. Run the mixnet for some time without sending own messages, download the client and cache node files. Look at the timestamps of the messages. The clients continuously send messages to the mixnet. However batches of 7 messages are received by the cache node within 0.15 seconds of each other, after this there is a waiting period of several seconds. Furthermore 7 is a prime number so it cannot be created by consecutive bursts of messages other than if the threshold was 1. The threshold is not 1 as otherwise messages would be sent more frequently, this can be verified by looking at the client logs. The threshold of all 3 mixers is 7.
 
-\section*{Question 2}
-\subsection*{2a}
-Using function runAssignment3A for this. \\
+\section{Question 2}
+\subsection{2a}
+Using function runAssignment2A and runAssignment1A for increments for this. \\
 
 Start a fresh mixnet and then send one message at a time waiting for something to appear on the cache node. That amount of messages will be the maximum combined threshold value for all three nodes, but does not have to be a threshold value. The amount of messages appearing at the cache node will be the threshold value of the last mix node.
 This gives a threshold for the last mixer of 6 and the combined maximum value is 8.
@@ -34,14 +36,15 @@ To conclude:
  \item nC = 6
 \end{itemize}
 
-\subsection*{2b}
-This answer is under the limitation that we can only provide input to 1 set node, and that there is always output from only a single node. Furthermore a side-channel attack on the timing, to see the difference between messages being buffered up in the last node or messages being flushed by the first or second node and then directly between the third node is also not considered feasible.
+\subsection{2b}
+This answer is under the limitation that we can only provide input to 1 mix node, and that there is always output from only the last node. Furthermore a side-channel attack on the timing, to see the difference between messages being buffered up in the last node or messages being flushed by the first or second node and then directly between the third node is also not considered feasible.
 
-To distinguish the thresholds under these conditions the number of input messages combined with the number of output messages for that input must be unique for every possible threshold. Otherwise two sets of thresholds may be identical under any inputs and outputs.
+To distinguish the thresholds under these conditions the set of input messages combined with the set of output messages for each input must be unique for every possible threshold. Otherwise two sets of thresholds may be identical under any inputs and outputs.
 
-Under these limitations the thresholds cannot always be determined. A mixnet with thresholds of 2 for mix A, 1 for mix B and 1 for mix C (2-1-1) cannot be distinguished from a mixnet with threshold 2 for mix A, 2 for mix B and 1 for mix C (2-2-1). There is no number of input messages for which the number of outputs is different between these two sets of thresholds.
+Under these limitations the thresholds cannot always be determined. A mixnet with thresholds of 2 for mix A, 1 for mix B and 1 for mix C (2-1-1) cannot be distinguished from a mixnet with threshold 2 for mix A, 2 for mix B and 1 for mix C (2-2-1). There is no set of input messages for which the set of outputs is different between these two thresholds combinations.
 
-\section*{Question 3}
-\subsection*{3a}
-\subsection*{3b}
+\section{Question 3}
+\subsection{3a}
+\subsection{3b}
+
 \end{document}

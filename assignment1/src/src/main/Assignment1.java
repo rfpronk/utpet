@@ -73,6 +73,17 @@ public class Assignment1 {
     	}
     }
     
+    public void runAssignment2A(int runs) {
+    	try {
+	    	for (int i=0; i<runs; i++) {		    	
+			    this.sendMessage("I am number " + i);	
+	    	}
+    	} catch (Exception ex) {
+    		System.out.println("ohoh! " + ex.getMessage());
+    		ex.printStackTrace();
+    	}
+    }
+    
     public void runAssignment3A() {
     	// params for n-1 attack
     	int runs = 36;
