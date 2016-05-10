@@ -6,7 +6,7 @@
 \subsection*{1a}
  See Assignment1.java. To make this work add the bouncycastle (bcprov...) as library.
 \subsection*{1c}
-7. Run the mixnet for some time without sending own messages, download the cache node file. Look at the timestamps of the messages. Batches of 7 messages are sent within 0.15 seconds of eachother, after this there is a waiting period of several seconds. Furthermore 7 is a prime number so it cannot be created by consecutive bursts of messages other than if the threshold was 1. The threshold is not 1 as otherwise messages would be sent more frequently, this can be verified by looking at the client logs. The threshold of all 3 mixers is 7.
+7. Run the mixnet for some time without sending own messages, download the client and cache node files. Look at the timestamps of the messages. The clients continuously send messages to the mixnet. However batches of 7 messages are received by the cache node within 0.15 seconds of each other, after this there is a waiting period of several seconds. Furthermore 7 is a prime number so it cannot be created by consecutive bursts of messages other than if the threshold was 1. The threshold is not 1 as otherwise messages would be sent more frequently, this can be verified by looking at the client logs. The threshold of all 3 mixers is 7.
 
 \section*{Question 2}
 \subsection*{2a}

