@@ -66,5 +66,9 @@ Found bad users: Alice | Alice | Alice | Alice | Alice |
 
 
 \subsection{3b}
+\begin{itemize}
+ \item Instead of using a fixed threshold use a dynamic pool mix. Pass on a randomly selected fraction of the messages in the mixer bucket after time interval and keep the rest.
+ \item Use a binomial pool mix. At an interval flip a virtual coin to determine if a certain message in the mixers bucket is forwarded or retained on a time based interval.
+\end{itemize}
 
 \end{document}
