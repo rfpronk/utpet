@@ -18,7 +18,12 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.crypto.engines.RSAEngine;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.pqc.jcajce.provider.util.AsymmetricBlockCipher;
+import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
 // as this is single use code we don't really care about exception handling
@@ -35,10 +40,10 @@ public class Assignment1 {
     private final static int MIXNET_NODE_COUNT=4;
 
     private final static String[] pubKeys = {
-    	"-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC12FPfdepBrzZc9oYrAQMutj/YDSHbVc+6kYMG2igq5aShYDkHUUa63l/u4D6w0d7FXCVvFShDKT9vawVJn8Qd1fyRINJrkufYRD4/n0e6JIGQ4FctpMMkNWAJsqWiNdA54dDrHEE210epDXIVI7e+mOVSme4vOmg1Gfqm7vdc5QIDAQAB-----END PUBLIC KEY-----",
-    	"-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDVhJycScH1rIP6p/c6mMxrDmcKUqEWbXUYMdD2HXtl7tdc1giZaCHMLxNL2loC1CFePW4UbHUVkuI3HBoMHuCm6CiXl3/1nvpRglLw9bVJCU4yLn/DgyNYwOQBK25sj1DiG+mXgIvRpV7Rk44/FltMU1oLUmaBHozLAEcT/y5HJQIDAQAB-----END PUBLIC KEY-----",
-    	"-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDWbUMbBFT9KdUYs5d/tWh7qR5ccBneQN6roVqqVKrxArV0UZMjmvDeyW2dJmmnbKaE6+AsicRWmVXzVWjb3cFHqfnXIkKIP+sskpquSkT7MrejL1IvgKQSy5JTp3EWmLs17fAeJF27bxCfPi0b9ccs1rMo1oEdTA+nuetGeXnCsQIDAQAB-----END PUBLIC KEY-----",
-    	"-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDD4qir1SKdQDZhCNwM1eMIWwYBviWPc9BZtp/PZS08TEt4V9PhFyuGyZ4v/UiA15JIqNUaK51AUwyqhkDHwmB5zZ9VpiR8xs8Ij8dFpi5Pm/aE2gmSnkPwVL5FgzJKJRqtUeX+yusDOyC9fYDaL8f13BgXwkMx3NCZpSNev8KT8QIDAQAB-----END PUBLIC KEY-----"
+    	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC12FPfdepBrzZc9oYrAQMutj/YDSHbVc+6kYMG2igq5aShYDkHUUa63l/u4D6w0d7FXCVvFShDKT9vawVJn8Qd1fyRINJrkufYRD4/n0e6JIGQ4FctpMMkNWAJsqWiNdA54dDrHEE210epDXIVI7e+mOVSme4vOmg1Gfqm7vdc5QIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
+    	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDVhJycScH1rIP6p/c6mMxrDmcKUqEWbXUYMdD2HXtl7tdc1giZaCHMLxNL2loC1CFePW4UbHUVkuI3HBoMHuCm6CiXl3/1nvpRglLw9bVJCU4yLn/DgyNYwOQBK25sj1DiG+mXgIvRpV7Rk44/FltMU1oLUmaBHozLAEcT/y5HJQIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
+    	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDWbUMbBFT9KdUYs5d/tWh7qR5ccBneQN6roVqqVKrxArV0UZMjmvDeyW2dJmmnbKaE6+AsicRWmVXzVWjb3cFHqfnXIkKIP+sskpquSkT7MrejL1IvgKQSy5JTp3EWmLs17fAeJF27bxCfPi0b9ccs1rMo1oEdTA+nuetGeXnCsQIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
+    	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDD4qir1SKdQDZhCNwM1eMIWwYBviWPc9BZtp/PZS08TEt4V9PhFyuGyZ4v/UiA15JIqNUaK51AUwyqhkDHwmB5zZ9VpiR8xs8Ij8dFpi5Pm/aE2gmSnkPwVL5FgzJKJRqtUeX+yusDOyC9fYDaL8f13BgXwkMx3NCZpSNev8KT8QIDAQAB" + '\n' + "-----END PUBLIC KEY-----"
     	};
     private Key[] symKeys = new Key[MIXNET_NODE_COUNT];
     
@@ -59,7 +64,7 @@ public class Assignment1 {
     
     public void runAssignment1B() {
     	try {
-    		this.sendMessage(this.studentNumbers[0] + " & " + this.studentNumbers[1]);
+    		this.sendMessage("A greeting from " + this.studentNumbers[0] + " & " + this.studentNumbers[1]);
     	} catch (Exception ex) {
     		System.out.println("ohoh! " + ex.getMessage());
     		ex.printStackTrace();
@@ -84,9 +89,8 @@ public class Assignment1 {
         return key;
     }
     
-    private String encryptForNode(String input, int targetNode) throws Exception {
-    	String pubKey = "";
-    	String encodedMessage;
+    private byte[] encryptForNode(byte[] input, int targetNode) throws Exception {
+    	byte[] pubKey = new byte[4];
     	
     	Security.addProvider(new BouncyCastleProvider());
     	
@@ -97,28 +101,38 @@ public class Assignment1 {
         Cipher encrypterWithPad = Cipher.getInstance("AES/CBC/PKCS7PADDING", "BC");
         SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
-        byte[] encryptedData = encrypterWithPad.doFinal(input.getBytes());
-        encodedMessage = new String(encryptedData);
+        byte[] encryptedData = encrypterWithPad.doFinal(input);
 
-        System.out.println("Encoded message: " + encodedMessage);
+        System.out.println("Encoded message: " + new String(encryptedData, "UTF-8"));
         
         // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
         Cipher rsawPad = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         StringReader strReader = new StringReader(pubKeys[targetNode]);
         PemReader reader = new PemReader(strReader);
-        System.out.println(reader.readPemObject());
+        PemObject pem = reader.readPemObject();
+        byte[] content = pem.getContent();
+        AsymmetricKeyParameter nhe = PublicKeyFactory.createKey(content);
         
-        return pubKey + encodedMessage;
+        
+        
+        
+
+        // combine pubKey and encrypted message
+        byte[] combined = new byte[encryptedData.length + pubKey.length];
+        System.arraycopy(encryptedData,0,combined,0,encryptedData.length);
+        System.arraycopy(pubKey,0,combined,encryptedData.length,pubKey.length);
+        
+        return combined;
     }
 
     private void sendMessage(String msg) throws Exception{
     	System.out.println("Sending message: " + msg);
     	
-    	// first encrypt message
-    	String result = "";
+    	// first encrypt message, start with plain input message
+    	byte[] encryptedData = msg.getBytes();
     	// encrypt for all nodes, starting with last one
     	for (int i=MIXNET_NODE_COUNT-1; i>=0; i--) {
-    		result = this.encryptForNode(result, i);
+    		encryptedData = this.encryptForNode(encryptedData, i);
     	}
     	
     	// calculate message length as four byte unsigned big endian
@@ -132,11 +146,10 @@ public class Assignment1 {
         Socket clientSocket = new Socket(Assignment1.MIXNET_HOSTNAME, Assignment1.MIXNET_PORT);
         DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
         outputStream.write(lengthPreField);
-        outputStream.writeBytes(result);
+        outputStream.write(encryptedData);
         clientSocket.close();
         
         System.out.println("Finished sending");
     }
  
-
 }
