@@ -18,11 +18,13 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.crypto.AsymmetricBlockCipher;
+import org.bouncycastle.crypto.digests.SHA1Digest;
+import org.bouncycastle.crypto.encodings.OAEPEncoding;
 import org.bouncycastle.crypto.engines.RSAEngine;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.pqc.jcajce.provider.util.AsymmetricBlockCipher;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -36,7 +38,7 @@ public class Assignment1 {
     private final static int RSA_KEY_SIZE = 1024;
     
     private final static String MIXNET_HOSTNAME = "pets.ewi.utwente.nl";
-    private final static int MIXNET_PORT = 57327;
+    private final static int MIXNET_PORT = 53069;
     private final static int MIXNET_NODE_COUNT=4;
 
     private final static String[] pubKeys = {
@@ -112,12 +114,11 @@ public class Assignment1 {
     }
     
     private byte[] encryptForNode(byte[] input, int targetNode) throws Exception {
-    	byte[] pubKey = new byte[4];
-    	
     	Security.addProvider(new BouncyCastleProvider());
     	
     	// using a static IV is fine for now
-        AlgorithmParameterSpec IVspec = new IvParameterSpec("0123456789ABCDEF".getBytes());
+    	byte[] ivBytes = "0123456789ABCDEF".getBytes();
+        AlgorithmParameterSpec IVspec = new IvParameterSpec(ivBytes);
 
         // encrypt with PKCS7 padding
         Cipher encrypterWithPad = Cipher.getInstance("AES/CBC/PKCS7PADDING", "BC");
@@ -125,24 +126,32 @@ public class Assignment1 {
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
         byte[] encryptedData = encrypterWithPad.doFinal(input);
 
-        System.out.println("Encoded message: " + new String(encryptedData, "UTF-8"));
+        //System.out.println("AES encoded message: " + new String(encryptedData, "UTF-8"));
+        
         
         // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
-        Cipher rsawPad = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        
+        // get key from PEM input
         StringReader strReader = new StringReader(pubKeys[targetNode]);
         PemReader reader = new PemReader(strReader);
         PemObject pem = reader.readPemObject();
         byte[] content = pem.getContent();
         AsymmetricKeyParameter nhe = PublicKeyFactory.createKey(content);
+        reader.close();
+        strReader.close();
         
+        // add OAEP encoding
+        AsymmetricBlockCipher asymBlockCipher = new OAEPEncoding(new RSAEngine(), new SHA1Digest());
+        asymBlockCipher.init(true, nhe);
+
+        // combine symmetric encryption key and IV for rsa encryption
+        byte[] rsaInput = combineByteArray(this.symKeys[targetNode].getEncoded(), ivBytes);
         
-        
-        
+        // encrypt using RSA
+        byte[] rsaPart = asymBlockCipher.processBlock(rsaInput, 0, rsaInput.length);
 
         // combine pubKey and encrypted message
-        byte[] combined = new byte[encryptedData.length + pubKey.length];
-        System.arraycopy(encryptedData,0,combined,0,encryptedData.length);
-        System.arraycopy(pubKey,0,combined,encryptedData.length,pubKey.length);
+        byte[] combined = combineByteArray(encryptedData, rsaPart);
         
         return combined;
     }
@@ -160,18 +169,27 @@ public class Assignment1 {
     	// calculate message length as four byte unsigned big endian
     	ByteBuffer buffer = ByteBuffer.allocate(4);
         buffer.order(ByteOrder.BIG_ENDIAN);
-        buffer.putInt(msg.length());
+        buffer.putInt(encryptedData.length);
         buffer.flip();
         byte[] lengthPreField = buffer.array();
         
+        System.out.println("Message length is " + msg.length());
+        System.out.println("Data length is " + encryptedData.length);
+
         // send message to first mixnet node
         Socket clientSocket = new Socket(Assignment1.MIXNET_HOSTNAME, Assignment1.MIXNET_PORT);
         DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
-        outputStream.write(lengthPreField);
-        outputStream.write(encryptedData);
+        outputStream.write(combineByteArray(lengthPreField, encryptedData));
         clientSocket.close();
         
         System.out.println("Finished sending");
     }
- 
+
+    private byte[] combineByteArray(byte[] a, byte[] b) {
+    	byte[] combined = new byte[a.length + b.length];
+        System.arraycopy(a, 0, combined, 0, a.length);
+        System.arraycopy(b, 0, combined, a.length, b.length);
+        return combined;
+    }
+    
 }
