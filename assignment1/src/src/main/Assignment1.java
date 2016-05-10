@@ -1,5 +1,7 @@
 package main;
 
+import java.io.DataOutputStream;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
@@ -39,15 +41,26 @@ public class Assignment1 {
     
 
     public static void main(String args[]) {
+    	System.out.println("Starting assignment1");
     	Assignment1 ass1 = new Assignment1();
-
+    	
+    	ass1.runAssignment1B();
     }
     
+    /**
+     * Constructor
+     */
     public Assignment1() {
-    	System.out.println("Starting assignment1");
     	this.generateSymKeys();
-    	
-    	System.out.println("done");
+    }
+    
+    public void runAssignment1B() {
+    	try {
+    		this.sendMessage(this.studentNumbers[0] + " & " + this.studentNumbers[1]);
+    	} catch (Exception ex) {
+    		System.out.println("ohoh! " + ex.getMessage());
+    		ex.printStackTrace();
+    	}
     }
 
     private void generateSymKeys() {
@@ -62,13 +75,13 @@ public class Assignment1 {
 
     private Key generateAESKey() throws NoSuchAlgorithmException, NoSuchProviderException {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-    	KeyGenerator KeyGen = KeyGenerator.getInstance("AES", "CBC");
+    	KeyGenerator KeyGen = KeyGenerator.getInstance("AES", "BC");
     	KeyGen.init(Assignment1.AES_KEY_SIZE);
     	Key key = KeyGen.generateKey();
         return key;
     }
     
-    public String encryptForNode(String input, int targetNode) throws Exception {
+    private String encryptForNode(String input, int targetNode) throws Exception {
     	String pubKey = "";
     	String encodedMessage;
     	
@@ -89,12 +102,13 @@ public class Assignment1 {
         return pubKey + encodedMessage;
     }
 
-    public void sendMessage(String msg) throws Exception{
+    private void sendMessage(String msg) throws Exception{
     	System.out.println("Sending message: " + msg);
     	
+    	// first encrypt message
     	String result = "";
     	// encrypt for all nodes, starting with last one
-    	for (int i=MIXNET_NODE_COUNT-1; i<=0; i--) {
+    	for (int i=MIXNET_NODE_COUNT-1; i>=0; i--) {
     		result = this.encryptForNode(result, i);
     	}
     	
@@ -105,13 +119,15 @@ public class Assignment1 {
         buffer.flip();
         byte[] lengthPreField = buffer.array();
         
-     // @TODO create TCP connection to MIXNET and transmit data
-
+        // send message to first mixnet node
+        Socket clientSocket = new Socket(Assignment1.MIXNET_HOSTNAME, Assignment1.MIXNET_PORT);
+        DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
+        outputStream.write(lengthPreField);
+        outputStream.writeBytes(result);
+        clientSocket.close();
+        
+        System.out.println("Finished sending");
     }
-    
-    public void sendStudentNumbers() throws Exception {
-    	this.sendMessage(this.studentNumbers[0] + " & " + this.studentNumbers[1]);
-    }
-
+ 
 
 }
