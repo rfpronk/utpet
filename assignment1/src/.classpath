@@ -2,6 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/Users/robin/Documents/Study/PET/assignments_repo/assignment1/src/libs/bcprov-ext-jdk15on-154.jar"/>
+	<classpathentry kind="lib" path="libs/bcprov-ext-jdk15on-154.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

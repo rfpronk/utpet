@@ -1,0 +1,23 @@
+\documentclass{article}
+\pagenumbering{gobble}
+
+\begin{document}
+\section*{Question 1}
+\subsection*{1a}
+ See Assignment1.java. To make this work add the bouncycastle (bcprov...) as library.
+\subsection*{1c}
+7. Run the mixnet for some time without sending own messages, download the cache node file. Look at the timestamps of the messages. Batches of 7 messages are sent within 0.15 seconds of eachother, after this there is a waiting period of several seconds. Furthermore 7 is a prime number so it cannot be created by consecutive bursts of messages other than if the threshold was 1. The threshold is not 1 as otherwise messages would be sent more frequently, this can be verified by looking at the client logs. The threshold of all 3 mixers is 7.
+
+\section*{Question 2}
+\subsection*{2a}
+\subsection*{2b}
+This answer is under the limitation that we can only provide input to 1 set node, and that there is always output from only a single node. Furthermore a side-channel attack on the timing, to see the difference between messages being buffered up in the last node or messages being flushed by the first or second node and then directly between the third node is also not considered feasible.
+
+To distinguish the thresholds under these conditions the number of input messages combined with the number of output messages for that input must be unique for every possible threshold. Otherwise two sets of thresholds may be identical under any inputs and outputs.
+
+Under these limitations the thresholds cannot always be determined. A mixnet with thresholds of 2 for mix A, 1 for mix B and 1 for mix C (2-1-1) cannot be distinguished from a mixnet with threshold 2 for mix A, 2 for mix B and 1 for mix C (2-2-1). There is no number of input messages for which the number of outputs is different between these two sets of thresholds.
+
+\section*{Question 3}
+\subsection*{3a}
+\subsection*{3b}
+\end{document}
