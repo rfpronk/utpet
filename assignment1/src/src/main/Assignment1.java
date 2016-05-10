@@ -56,7 +56,7 @@ public class Assignment1 {
     
     public void runAssignment1B() {
     	try {
-    		this.sendMessage(this.studentNumbers[0] + " & " + this.studentNumbers[1]);
+    		this.sendMessage("A greeting from " + this.studentNumbers[0] + " & " + this.studentNumbers[1]);
     	} catch (Exception ex) {
     		System.out.println("ohoh! " + ex.getMessage());
     		ex.printStackTrace();
@@ -81,9 +81,8 @@ public class Assignment1 {
         return key;
     }
     
-    private String encryptForNode(String input, int targetNode) throws Exception {
-    	String pubKey = "";
-    	String encodedMessage;
+    private byte[] encryptForNode(byte[] input, int targetNode) throws Exception {
+    	byte[] pubKey = new byte[4];
     	
     	Security.addProvider(new BouncyCastleProvider());
     	
@@ -94,22 +93,26 @@ public class Assignment1 {
         Cipher encrypterWithPad = Cipher.getInstance("AES/CBC/PKCS7PADDING", "BC");
         SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
-        byte[] encryptedData = encrypterWithPad.doFinal(input.getBytes());
-        encodedMessage = new String(encryptedData);
+        byte[] encryptedData = encrypterWithPad.doFinal(input);
 
-        System.out.println("Encoded message: " + encodedMessage);
+        System.out.println("Encoded message: " + new String(encryptedData, "UTF-8"));
         
-        return pubKey + encodedMessage;
+        // combine pubKey and encrypted message
+        byte[] combined = new byte[encryptedData.length + pubKey.length];
+        System.arraycopy(encryptedData,0,combined,0,encryptedData.length);
+        System.arraycopy(pubKey,0,combined,encryptedData.length,pubKey.length);
+        
+        return combined;
     }
 
     private void sendMessage(String msg) throws Exception{
     	System.out.println("Sending message: " + msg);
     	
-    	// first encrypt message
-    	String result = "";
+    	// first encrypt message, start with plain input message
+    	byte[] encryptedData = msg.getBytes();
     	// encrypt for all nodes, starting with last one
     	for (int i=MIXNET_NODE_COUNT-1; i>=0; i--) {
-    		result = this.encryptForNode(result, i);
+    		encryptedData = this.encryptForNode(encryptedData, i);
     	}
     	
     	// calculate message length as four byte unsigned big endian
@@ -123,11 +126,10 @@ public class Assignment1 {
         Socket clientSocket = new Socket(Assignment1.MIXNET_HOSTNAME, Assignment1.MIXNET_PORT);
         DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
         outputStream.write(lengthPreField);
-        outputStream.writeBytes(result);
+        outputStream.write(encryptedData);
         clientSocket.close();
         
         System.out.println("Finished sending");
     }
  
-
 }
