@@ -7,10 +7,12 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -136,22 +138,22 @@ public class Assignment1 {
         PemReader reader = new PemReader(strReader);
         PemObject pem = reader.readPemObject();
         byte[] content = pem.getContent();
-        AsymmetricKeyParameter nhe = PublicKeyFactory.createKey(content);
+        AsymmetricKeyParameter asymPubKey = PublicKeyFactory.createKey(content);
         reader.close();
         strReader.close();
         
         // add OAEP encoding
         AsymmetricBlockCipher asymBlockCipher = new OAEPEncoding(new RSAEngine(), new SHA1Digest());
-        asymBlockCipher.init(true, nhe);
+        asymBlockCipher.init(true, asymPubKey);
 
-        // combine symmetric encryption key and IV for rsa encryption
+        // combine symmetric encryption key and IV for RSA encryption
         byte[] rsaInput = combineByteArray(this.symKeys[targetNode].getEncoded(), ivBytes);
         
         // encrypt using RSA
         byte[] rsaPart = asymBlockCipher.processBlock(rsaInput, 0, rsaInput.length);
-
+        
         // combine pubKey and encrypted message
-        byte[] combined = combineByteArray(encryptedData, rsaPart);
+        byte[] combined = combineByteArray(rsaPart, encryptedData);
         
         return combined;
     }
