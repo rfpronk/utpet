@@ -1,18 +1,15 @@
 package main;
 
 import java.io.DataOutputStream;
-import java.io.FileReader;
 import java.io.StringReader;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
-import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
-import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -56,7 +53,8 @@ public class Assignment1 {
     	System.out.println("Starting assignment1");
     	Assignment1 ass1 = new Assignment1();
     	
-    	ass1.runAssignment1B();
+    	//ass1.runAssignment1B();
+    	ass1.runAssignment3A();
     }
     
     /**
@@ -68,7 +66,7 @@ public class Assignment1 {
     
     public void runAssignment1B() {
     	try {
-    		this.sendMessage("A greeting from " + this.studentNumbers[0] + " & " + this.studentNumbers[1]);
+    		this.sendMessage("TIM\tA greeting from " + this.studentNumbers[0] + " & " + this.studentNumbers[1]);
     	} catch (Exception ex) {
     		System.out.println("ohoh! " + ex.getMessage());
     		ex.printStackTrace();
@@ -77,9 +75,9 @@ public class Assignment1 {
     
     public void runAssignment3A() {
     	// params for n-1 attack
-    	int runs = 10;
-    	int threshold = 7;
-    	int runPauseTime = 500; // should be large enough to allow victim to send but not so large for two legit messages
+    	int runs = 36;
+    	int threshold = 2;
+    	int runPauseTime = 200; // should be large enough to allow victim to send but not so large for two legit messages
     	
     	try {
     		// perform multiple runs so we don't need to time our attack
@@ -127,9 +125,7 @@ public class Assignment1 {
         SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
         byte[] encryptedData = encrypterWithPad.doFinal(input);
-
-        //System.out.println("AES encoded message: " + new String(encryptedData, "UTF-8"));
-        
+        //System.out.println("AES encoded message: " + new String(encryptedData, "UTF-8"));  
         
         // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
         
@@ -175,8 +171,8 @@ public class Assignment1 {
         buffer.flip();
         byte[] lengthPreField = buffer.array();
         
-        System.out.println("Message length is " + msg.length());
-        System.out.println("Data length is " + encryptedData.length);
+        //System.out.println("Message length is " + msg.length());
+        //System.out.println("Data length is " + encryptedData.length);
 
         // send message to first mixnet node
         Socket clientSocket = new Socket(Assignment1.MIXNET_HOSTNAME, Assignment1.MIXNET_PORT);
@@ -184,7 +180,7 @@ public class Assignment1 {
         outputStream.write(combineByteArray(lengthPreField, encryptedData));
         clientSocket.close();
         
-        System.out.println("Finished sending");
+        //System.out.println("Finished sending");
     }
 
     private byte[] combineByteArray(byte[] a, byte[] b) {
