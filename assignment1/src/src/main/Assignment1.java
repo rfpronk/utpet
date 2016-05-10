@@ -2,6 +2,7 @@ package main;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.Socket;
@@ -46,6 +47,10 @@ public class Assignment1 {
     private final static int MIXNET_NODE_COUNT=4; // we count the cache node as mixnet node
     private final static String MIXNET_RECEIVE_LOG_URL = "http://pets.ewi.utwente.nl:57327/log/cache";
     private final static String MIXNET_OTHERS_LOG_URL = "http://pets.ewi.utwente.nl:57327/log/clients";
+    
+    private final static String MIXNET_RESET_URL = "http://pets.ewi.utwente.nl:57327/cmd/reset";
+    private final static String MIXNET_START_URL = "http://pets.ewi.utwente.nl:57327/cmd/mix";
+
 
     private final static String[] pubKeys = {
     	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC12FPfdepBrzZc9oYrAQMutj/YDSHbVc+6kYMG2igq5aShYDkHUUa63l/u4D6w0d7FXCVvFShDKT9vawVJn8Qd1fyRINJrkufYRD4/n0e6JIGQ4FctpMMkNWAJsqWiNdA54dDrHEE210epDXIVI7e+mOVSme4vOmg1Gfqm7vdc5QIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
@@ -58,12 +63,24 @@ public class Assignment1 {
     // --------- basic class functions ---------------
     
     public static void main(String args[]) {
-    	System.out.println("Starting assignment1");
+    	System.out.println("Starting PET assignment 1");
     	Assignment1 ass1 = new Assignment1();
     	
     	//ass1.runAssignment1B();
-    	ass1.runAssignment2A(36);
-    	//ass1.runAssignment3A();
+    	//ass1.runAssignment2A(36);
+    	
+    	// run multiple times to be sure
+    	int iterations=5;
+    	String badUsers[] = new String[iterations];
+    	for (int i=0; i<iterations; i++) {
+    		badUsers[i] = ass1.runAssignment3A();
+    	}
+    	System.out.print("Found bad users: ");
+    	for (int i=0; i<iterations; i++) {
+    		System.out.print(badUsers[i] + " | ");
+    	}
+    	System.out.println("");
+    	
     }
     
     /**
@@ -77,6 +94,7 @@ public class Assignment1 {
     
     public void runAssignment1B() {
     	try {
+    		this.startMixnet(1);
     		this.sendMessage("TIM\tA greeting from " + this.studentNumbers[0] + " & " + this.studentNumbers[1]);
     	} catch (Exception ex) {
     		System.out.println("ohoh! " + ex.getMessage());
@@ -86,6 +104,7 @@ public class Assignment1 {
     
     public void runAssignment2A(int runs) {
     	try {
+    		this.startMixnet(2);
 	    	for (int i=0; i<runs; i++) {		    	
 			    this.sendMessage("I am number " + i);	
 	    	}
@@ -95,26 +114,99 @@ public class Assignment1 {
     	}
     }
     
-    public void runAssignment3A() {
-    	// params for n-1 attack
-    	int runs = 36;
-    	int threshold = 2;
-    	int runPauseTime = 200; // should be large enough to allow victim to send but not so large for two legit messages
+    public String runAssignment3A() {
+    	// some working vars
+    	String badUser = "";
+    	int cnt = 0;
+    	String prevSender = "";
+    	int lastOutput = 0;
+    	boolean go = true;    	
+    	boolean hunt = false;
     	
+    	// settings
+    	String spamMessage = "Boo!";
+    	String wantedMessage = "Tim";
+    	int fullFlushThreshold = 6; // found using method of 2a
+    	
+    	// we want to monitor senders. after someone sends we want an isolated output of the single message to Tim and aside that only our own messages.
     	try {
-    		// perform multiple runs so we don't need to time our attack
-	    	for (int i=0; i<runs; i++) {
-	    		// spam until threshold is almost reaches (n-1)
-		    	for (int j=1; j<threshold; j++) {
-			    	this.sendMessage("Boo! #" + i + "|" + j);	
-		    	}
-		    	// give the victim time to send his/her message
-		    	Thread.sleep(runPauseTime);
+    		this.startMixnet(3);
+    		
+    		// prefill mixer buckets
+			for (int j=0; j<fullFlushThreshold/2; j++) {
+				this.sendMessage(spamMessage + " #" + cnt++);	
+			}
+    		
+    		// keep running until we have our result then stop immediately
+	    	while (go) {
+	    		// get client log
+	    		String senders = this.readHTTPPage(MIXNET_OTHERS_LOG_URL);
+	    		String[] senderLines = senders.split("\n");
+	    		String lastSender = senderLines[senderLines.length - 1];
+	    		
+    			// something new send?
+    			if (lastSender.equals(prevSender)) {
+    				// nothing new, hunting?
+    				if (hunt) {
+    					String output = this.readHTTPPage(MIXNET_RECEIVE_LOG_URL);
+    					String[] outputLines = output.split("\n");
+	    				// check if output since last send message only contains a single wanted message aside our own messages
+	    	    		int notOurs = 0;
+	    	    		boolean found = false;
+	    	    		// search from last output position before new message was send
+	    		    	int start = lastOutput-1;
+	    		    	if (start > 0) {
+		    				// we want a full flush with only our messages after the wanted message, so no confusing mixing is done in between
+	    		    		for (int i=start; i<outputLines.length; i++) {
+	    		    			if (outputLines[i].contains(wantedMessage)) {
+	    		    				found = true;
+	    		    			} else {
+	    		    				if (!outputLines[i].contains(spamMessage)) {
+	    		    					notOurs++;
+	    		    					//System.out.println("Found a different message from user " + lastSender.substring(29, lastSender.indexOf(" ", 29)) + ": " + outputLines[i]);
+	    		    				}
+	    		    			}
+	    		    		}
+	    	    		}
+	    		    	lastOutput = outputLines.length;
+	    		    	if (outputLines.length - start > fullFlushThreshold) {
+	    		    		hunt = false;
+	    		    		System.out.println("Stopping hunt");
+	    		    	}
+	    		    	
+	    		    	if (found && notOurs == 0) {
+	    	    			// message is found exclusively, lets pick the last sender from the log
+	    	    			badUser = lastSender.substring(29, lastSender.indexOf(" ", 29));
+	    	    			System.out.println("Found the wanted message from sender: " + badUser);
+	    	    			// got him/her! so we can stop now
+	    	    			go = false;
+	    	    		} else if (found) {
+	    		    		System.out.println("Found wanted message but not exclusive " + notOurs + " other messages in output batch");
+	    	    		}
+    				}
+    			} else {
+    				// yes a new message, time to flush!
+    				
+    				// start hunting, save last output position
+    				hunt = true;
+    				
+    				String output = this.readHTTPPage(MIXNET_RECEIVE_LOG_URL);
+					String[] outputLines = output.split("\n");
+					lastOutput = outputLines.length;
+					
+					System.out.println("New sender " + lastSender);
+					// flush to full threshold minus 1 (n-1 attack)
+    				for (int j=0; j<fullFlushThreshold-1; j++) {
+	    				this.sendMessage(spamMessage + " #" + cnt++);	
+	    			}
+    				prevSender = lastSender;		
+    			}		
 	    	}
     	} catch (Exception ex) {
     		System.out.println("ohoh! " + ex.getMessage());
     		ex.printStackTrace();
     	}
+    	return badUser;
     }
     
     // --------- mixnet functions ---------------
@@ -122,7 +214,8 @@ public class Assignment1 {
     private void generateSymKeys() {
     	try {
     		for (int i=0; i<MIXNET_NODE_COUNT; i++) {
-    			this.symKeys[i] = this.generateAESKey();    		}
+    			this.symKeys[i] = this.generateAESKey();
+    		}
     	} catch (Exception ex) {
     		System.out.println("Exception generating AES keys: " + ex.getMessage());
     		ex.printStackTrace();
@@ -178,7 +271,7 @@ public class Assignment1 {
     }
 
     private void sendMessage(String msg) throws Exception{
-    	System.out.println("Sending message: " + msg);
+    	//System.out.println("Sending message: " + msg);
     	
     	// first encrypt message, start with plain input message
     	byte[] encryptedData = msg.getBytes();
@@ -218,15 +311,32 @@ public class Assignment1 {
     
     private String readHTTPPage(String webpage) throws Exception {
     	String result = "";
-    	URL URL = new URL(webpage);
-        BufferedReader in = new BufferedReader(new InputStreamReader(URL.openStream()));
-
-        String inputLine;
-        while ((inputLine = in.readLine()) != null) {
-            result += inputLine;
-        }
-        in.close();
+    	try {
+	    	URL URL = new URL(webpage);
+	        BufferedReader in = new BufferedReader(new InputStreamReader(URL.openStream()));
+	
+	        String inputLine;
+	        while ((inputLine = in.readLine()) != null) {
+	            result += inputLine + '\n';
+	        }
+	        in.close();
+    	} catch (FileNotFoundException ex) {
+    		if (webpage.contains("log")) {
+    			// probably not ready yet, thats okay
+    		} else {
+    			throw ex;
+    		}
+    	}
         return result;
+    }
+    
+    private void startMixnet(int number) throws Exception {
+    	System.out.println("Stopping running mixnet if any");
+    	this.readHTTPPage(MIXNET_RESET_URL);
+    	Thread.sleep(1000);
+    	System.out.println("Starting mixnet " + number);
+    	this.readHTTPPage(MIXNET_START_URL + number);
+    	Thread.sleep(200);
     }
     
 }
