@@ -1,13 +1,27 @@
 package main;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
 import java.security.Security;
+import java.security.spec.AlgorithmParameterSpec;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+// as this is single use code we don't really care about exception handling
 
 public class Assignment1 {
 
@@ -53,27 +67,54 @@ public class Assignment1 {
 
     private Key generateAESKey() throws NoSuchAlgorithmException, NoSuchProviderException {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-    	 KeyGenerator KeyGen = KeyGenerator.getInstance("AES", "CBC");
-    	 KeyGen.init(Assignment1.AES_KEY_SIZE);
-    	 Key key = KeyGen.generateKey();
+    	KeyGenerator KeyGen = KeyGenerator.getInstance("AES", "CBC");
+    	KeyGen.init(Assignment1.AES_KEY_SIZE);
+    	Key key = KeyGen.generateKey();
         return key;
     }
     
-    public String encryptForNode(String input, int targetNode) {
-    	return "";
+    public String encryptForNode(String input, int targetNode) throws Exception {
+    	String pubKey = "";
+    	String encodedMessage;
+    	
+    	Security.addProvider(new BouncyCastleProvider());
+    	
+        AlgorithmParameterSpec IVspec = new IvParameterSpec("0123456789ABCDEF".getBytes());
+
+        // encrypt with PKCS7 padding
+        Cipher encrypterWithPad = Cipher.getInstance("AES/CBC/PKCS7PADDING", "BC");
+        SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
+        encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
+        byte[] encryptedData = encrypterWithPad.doFinal(input.getBytes());
+        
+        encodedMessage = new String(encryptedData);
+
+        System.out.println("Encode message: " + encodedMessage);
+        
+        return pubKey + encodedMessage;
     }
 
-    public void sendMessage(String msg) {
+    public void sendMessage(String msg) throws Exception{
+    	System.out.println("Sending message: " + msg);
+    	
     	String result = "";
     	// encrypt for all nodes, starting with last one
     	for (int i=MIXNET_NODE_COUNT-1; i<=0; i--) {
     		result = this.encryptForNode(result, i);
     	}
     	
-    	// @TODO create TCP connection to MIXNET and transmit data
+    	// calculate message length as four byte unsigned big endian
+    	ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        buffer.putInt(msg.length());
+        buffer.flip();
+        byte[] lengthPreField = buffer.array();
+        
+     // @TODO create TCP connection to MIXNET and transmit data
+
     }
     
-    public void sendStudentNumbers() {
+    public void sendStudentNumbers() throws Exception {
     	this.sendMessage(this.studentNumbers[0] + " & " + this.studentNumbers[1]);
     }
 
