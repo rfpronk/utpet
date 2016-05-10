@@ -1,6 +1,8 @@
 package main;
 
 import java.io.DataOutputStream;
+import java.io.FileReader;
+import java.io.StringReader;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -16,7 +18,13 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.crypto.engines.RSAEngine;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.pqc.jcajce.provider.util.AsymmetricBlockCipher;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
 
 // as this is single use code we don't really care about exception handling
 
@@ -119,6 +127,18 @@ public class Assignment1 {
 
         System.out.println("Encoded message: " + new String(encryptedData, "UTF-8"));
         
+        // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
+        Cipher rsawPad = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        StringReader strReader = new StringReader(pubKeys[targetNode]);
+        PemReader reader = new PemReader(strReader);
+        PemObject pem = reader.readPemObject();
+        byte[] content = pem.getContent();
+        AsymmetricKeyParameter nhe = PublicKeyFactory.createKey(content);
+        
+        
+        
+        
+
         // combine pubKey and encrypted message
         byte[] combined = new byte[encryptedData.length + pubKey.length];
         System.arraycopy(encryptedData,0,combined,0,encryptedData.length);
