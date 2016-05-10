@@ -1,8 +1,11 @@
 package main;
 
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.Socket;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
@@ -31,6 +34,8 @@ import org.bouncycastle.util.io.pem.PemReader;
 
 public class Assignment1 {
 
+	 // --------- vars and data ---------------
+	
 	private String[] studentNumbers = {"s1227874", "s0138746"}; 
 
     private final static int AES_KEY_SIZE = 128;
@@ -38,7 +43,9 @@ public class Assignment1 {
     
     private final static String MIXNET_HOSTNAME = "pets.ewi.utwente.nl";
     private final static int MIXNET_PORT = 53069;
-    private final static int MIXNET_NODE_COUNT=4;
+    private final static int MIXNET_NODE_COUNT=4; // we count the cache node as mixnet node
+    private final static String MIXNET_RECEIVE_LOG_URL = "http://pets.ewi.utwente.nl:57327/log/cache";
+    private final static String MIXNET_OTHERS_LOG_URL = "http://pets.ewi.utwente.nl:57327/log/clients";
 
     private final static String[] pubKeys = {
     	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC12FPfdepBrzZc9oYrAQMutj/YDSHbVc+6kYMG2igq5aShYDkHUUa63l/u4D6w0d7FXCVvFShDKT9vawVJn8Qd1fyRINJrkufYRD4/n0e6JIGQ4FctpMMkNWAJsqWiNdA54dDrHEE210epDXIVI7e+mOVSme4vOmg1Gfqm7vdc5QIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
@@ -46,15 +53,17 @@ public class Assignment1 {
     	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDWbUMbBFT9KdUYs5d/tWh7qR5ccBneQN6roVqqVKrxArV0UZMjmvDeyW2dJmmnbKaE6+AsicRWmVXzVWjb3cFHqfnXIkKIP+sskpquSkT7MrejL1IvgKQSy5JTp3EWmLs17fAeJF27bxCfPi0b9ccs1rMo1oEdTA+nuetGeXnCsQIDAQAB" + '\n' + "-----END PUBLIC KEY-----",
     	"-----BEGIN PUBLIC KEY-----" + '\n' + "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDD4qir1SKdQDZhCNwM1eMIWwYBviWPc9BZtp/PZS08TEt4V9PhFyuGyZ4v/UiA15JIqNUaK51AUwyqhkDHwmB5zZ9VpiR8xs8Ij8dFpi5Pm/aE2gmSnkPwVL5FgzJKJRqtUeX+yusDOyC9fYDaL8f13BgXwkMx3NCZpSNev8KT8QIDAQAB" + '\n' + "-----END PUBLIC KEY-----"
     	};
-    private Key[] symKeys = new Key[MIXNET_NODE_COUNT];
+    private Key[] symKeys = new Key[MIXNET_NODE_COUNT];    
     
-
+    // --------- basic class functions ---------------
+    
     public static void main(String args[]) {
     	System.out.println("Starting assignment1");
     	Assignment1 ass1 = new Assignment1();
     	
     	//ass1.runAssignment1B();
-    	ass1.runAssignment3A();
+    	ass1.runAssignment2A(36);
+    	//ass1.runAssignment3A();
     }
     
     /**
@@ -63,6 +72,8 @@ public class Assignment1 {
     public Assignment1() {
     	this.generateSymKeys();
     }
+    
+    // --------- assignment specific functions ---------------
     
     public void runAssignment1B() {
     	try {
@@ -105,6 +116,8 @@ public class Assignment1 {
     		ex.printStackTrace();
     	}
     }
+    
+    // --------- mixnet functions ---------------
 
     private void generateSymKeys() {
     	try {
@@ -120,14 +133,14 @@ public class Assignment1 {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     	KeyGenerator KeyGen = KeyGenerator.getInstance("AES", "BC");
     	KeyGen.init(Assignment1.AES_KEY_SIZE);
-    	Key key = KeyGen.generateKey();
-        return key;
+    	return KeyGen.generateKey();
     }
     
-    private byte[] encryptForNode(byte[] input, int targetNode) throws Exception {
+    private byte[] encryptForNode(byte[] inputPayload, int targetNode) throws Exception {
+    	// --- first we encrypt our payload
     	Security.addProvider(new BouncyCastleProvider());
     	
-    	// using a static IV is fine for now
+    	// using a static and shared IV is not very secure but fine for this assignment
     	byte[] ivBytes = "0123456789ABCDEF".getBytes();
         AlgorithmParameterSpec IVspec = new IvParameterSpec(ivBytes);
 
@@ -135,34 +148,33 @@ public class Assignment1 {
         Cipher encrypterWithPad = Cipher.getInstance("AES/CBC/PKCS7PADDING", "BC");
         SecretKey secretKey = new SecretKeySpec( this.symKeys[targetNode].getEncoded(), "AES");
         encrypterWithPad.init(Cipher.ENCRYPT_MODE, secretKey, IVspec);
-        byte[] encryptedData = encrypterWithPad.doFinal(input);
+        byte[] encryptedData = encrypterWithPad.doFinal(inputPayload);
         //System.out.println("AES encoded message: " + new String(encryptedData, "UTF-8"));  
         
-        // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
+        // --- Second we encrypt our symmetric key with the asymetric key of the target
+        // encryption with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
         
         // get key from PEM input
-        StringReader strReader = new StringReader(pubKeys[targetNode]);
-        PemReader reader = new PemReader(strReader);
-        PemObject pem = reader.readPemObject();
-        byte[] content = pem.getContent();
-        AsymmetricKeyParameter asymPubKey = PublicKeyFactory.createKey(content);
-        reader.close();
-        strReader.close();
+        PemReader pemReader = new PemReader(new StringReader(pubKeys[targetNode]));
+        PemObject pemObject = pemReader.readPemObject();
+        byte[] keyContent = pemObject.getContent();
+        AsymmetricKeyParameter asymPubKey = PublicKeyFactory.createKey(keyContent);
+        pemReader.close();
         
         // add OAEP encoding
         AsymmetricBlockCipher asymBlockCipher = new OAEPEncoding(new RSAEngine(), new SHA1Digest());
         asymBlockCipher.init(true, asymPubKey);
-
+        
         // combine symmetric encryption key and IV for RSA encryption
         byte[] rsaInput = combineByteArray(this.symKeys[targetNode].getEncoded(), ivBytes);
         
         // encrypt using RSA
-        byte[] rsaPart = asymBlockCipher.processBlock(rsaInput, 0, rsaInput.length);
+        byte[] rsaOutput = asymBlockCipher.processBlock(rsaInput, 0, rsaInput.length);
+        
+        // --- Third we combine both parts
         
         // combine pubKey and encrypted message
-        byte[] combined = combineByteArray(rsaPart, encryptedData);
-        
-        return combined;
+        return combineByteArray(rsaOutput, encryptedData);
     }
 
     private void sendMessage(String msg) throws Exception{
@@ -170,7 +182,7 @@ public class Assignment1 {
     	
     	// first encrypt message, start with plain input message
     	byte[] encryptedData = msg.getBytes();
-    	// encrypt for all nodes, starting with last one
+    	// encrypt for all nodes, starting with last one, creating onion
     	for (int i=MIXNET_NODE_COUNT-1; i>=0; i--) {
     		encryptedData = this.encryptForNode(encryptedData, i);
     	}
@@ -194,11 +206,27 @@ public class Assignment1 {
         //System.out.println("Finished sending");
     }
 
+    
+    // --------- helper functions ---------------
+    
     private byte[] combineByteArray(byte[] a, byte[] b) {
     	byte[] combined = new byte[a.length + b.length];
         System.arraycopy(a, 0, combined, 0, a.length);
         System.arraycopy(b, 0, combined, a.length, b.length);
         return combined;
+    }
+    
+    private String readHTTPPage(String webpage) throws Exception {
+    	String result = "";
+    	URL URL = new URL(webpage);
+        BufferedReader in = new BufferedReader(new InputStreamReader(URL.openStream()));
+
+        String inputLine;
+        while ((inputLine = in.readLine()) != null) {
+            result += inputLine;
+        }
+        in.close();
+        return result;
     }
     
 }
