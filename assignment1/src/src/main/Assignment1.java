@@ -1,6 +1,8 @@
 package main;
 
 import java.io.DataOutputStream;
+import java.io.FileReader;
+import java.io.StringReader;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -17,6 +19,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.io.pem.PemReader;
 
 // as this is single use code we don't really care about exception handling
 
@@ -98,6 +101,12 @@ public class Assignment1 {
         encodedMessage = new String(encryptedData);
 
         System.out.println("Encoded message: " + encodedMessage);
+        
+        // encrypt with 1024-bit RSA - optimal Asymmetric Encryption Padding (OAEP) (PKCS1-OAEP)
+        Cipher rsawPad = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        StringReader strReader = new StringReader(pubKeys[targetNode]);
+        PemReader reader = new PemReader(strReader);
+        System.out.println(reader.readPemObject());
         
         return pubKey + encodedMessage;
     }
