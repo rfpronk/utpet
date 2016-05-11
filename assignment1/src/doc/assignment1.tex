@@ -28,12 +28,14 @@ We used function runAssignment2A and runAssignment1A for increments for this. \\
 Start a fresh mixnet and then send one message at a time waiting for something to appear on the cache node. That amount of messages will be the maximum combined threshold value for all three nodes, but does not have to be a threshold value. The amount of messages appearing at the cache node will be the threshold value of the last mix node.
 This gives a threshold for the last mixer of 6 and the combined maximum value is 8.
 
-\paragraph{} Next we will increase the amount of message send, all containing a number so we can identify the message.
+\paragraph{} Next we will increase the amount of message sent, all containing a number so we can identify the message.
 After 36 messages we got 30 messages on the cache node, which is five times its threshold.
 This output contains message number 35 but never 36.
 At this stage the last mixer has just been flushed but can still hold new messages. The third mixer can only get incoming messages, causing it to flush, when the second mixer flushes its bucket into to third.
-The same holds for second mixer with the first mixer flushing. However the first mixer only receives one message at a time from us so after it flushes it is empty as long as we don't send anything new. So at this moment the first mixer is empty and the other two may contain more messages.
-This means the second and third mixer still together contain 6 (36-6) messages. 
+The same holds for second mixer with the first mixer flushing. However the first mixer only receives one message at a time from us so after it flushes it is empty as long as we don't send anything new. 
+\paragraph{}
+So at this moment the first mixer is empty and the other two may contain more messages.
+This means the second and third mixer together contain 6 (36-6) messages. 
 Earlier runs show that the first mixer also flushes on 28, 22, 14 and 8. The threshold of the first mixer thus has to be a common divisor for 36, 28, 22, 14 and 8, which is 2.
 \paragraph{}
 As message 35 is the highest one out (many runs used to beat the odds of mixing), number 36 is held by mixer two and not by one, which is empty, or three, otherwise message 36 should be mixed in by mixer two sometimes.
